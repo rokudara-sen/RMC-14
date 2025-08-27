@@ -8,6 +8,7 @@ using Content.Shared.Administration;
 using Content.Shared.Database;
 using Content.Shared.Mind.Components;
 using Content.Shared.Verbs;
+using Robust.Server.GameObjects;
 using Robust.Shared.Player;
 using Robust.Shared.Utility;
 
@@ -154,13 +155,13 @@ public sealed class MutinySystem : SharedMutinySystem
         if (args.Handled)
             return;
 
-        if (args.Target == null || HasComp<MutineerComponent>(args.Target) || !HasComp<MarineComponent>(args.Target))
+        if (!args.Target.IsValid() || HasComp<MutineerComponent>(args.Target) || !HasComp<MarineComponent>(args.Target))
             return;
 
-        if (!TryComp<ActorComponent>(args.Target.Value, out var actor))
+        if (!TryComp<ActorComponent>(args.Target, out var actor))
             return;
 
         args.Handled = true;
-        _euis.OpenEui(new MutineerInviteEui(args.Target.Value, this), actor.PlayerSession);
+        _euis.OpenEui(new MutineerInviteEui(args.Target, this), actor.PlayerSession);
     }
 }
