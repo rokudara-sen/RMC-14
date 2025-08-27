@@ -1,5 +1,6 @@
 using Content.Server.EUI;
 using Content.Shared._RMC14.Marines.Mutiny;
+using Content.Shared.Eui;
 
 namespace Content.Server._RMC14.Marines.Mutiny;
 
