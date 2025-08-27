@@ -9,8 +9,8 @@ namespace Content.Client._RMC14.Marines.Mutiny;
 
 public sealed class MutineerInviteWindow : DefaultWindow
 {
-    public readonly Button DenyButton;
-    public readonly Button AcceptButton;
+    public Button DenyButton { get; }
+    public Button AcceptButton { get; }
 
     public MutineerInviteWindow()
     {
@@ -26,37 +26,30 @@ public sealed class MutineerInviteWindow : DefaultWindow
             Text = Loc.GetString("mutineer-invite-deny")
         };
 
-        Contents.AddChild(new BoxContainer
+        var layout = new BoxContainer
         {
-            Orientation = LayoutOrientation.Vertical,
-            Children =
-            {
-                new BoxContainer
-                {
-                    Orientation = LayoutOrientation.Vertical,
-                    Children =
-                    {
-                        new Label
-                        {
-                            Text = Loc.GetString("mutineer-invite-text")
-                        },
-                        new BoxContainer
-                        {
-                            Orientation = LayoutOrientation.Horizontal,
-                            Align = AlignMode.Center,
-                            Children =
-                            {
-                                AcceptButton,
-                                new Control
-                                {
-                                    MinSize = new Vector2(20, 0)
-                                },
-                                DenyButton
-                            }
-                        }
-                    }
-                }
-            }
+            Orientation = LayoutOrientation.Vertical
+        };
+
+        layout.AddChild(new Label
+        {
+            Text = Loc.GetString("mutineer-invite-text")
         });
+
+        var buttonRow = new BoxContainer
+        {
+            Orientation = LayoutOrientation.Horizontal,
+            Align = AlignMode.Center
+        };
+
+        buttonRow.AddChild(AcceptButton);
+        buttonRow.AddChild(new Control
+        {
+            MinSize = new Vector2(20, 0)
+        });
+        buttonRow.AddChild(DenyButton);
+
+        layout.AddChild(buttonRow);
+        Contents.AddChild(layout);
     }
 }
