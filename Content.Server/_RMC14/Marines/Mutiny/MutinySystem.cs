@@ -2,6 +2,7 @@ using Content.Server.Administration.Managers;
 using Content.Server.Chat.Managers;
 using Content.Server.EUI;
 using Content.Server.Actions;
+using Content.Server.Roles.Jobs;
 using Content.Shared._RMC14.Marines;
 using Content.Shared._RMC14.Marines.Mutiny;
 using Content.Shared._RMC14.Synth;
@@ -21,6 +22,7 @@ public sealed class MutinySystem : SharedMutinySystem
     [Dependency] private readonly IChatManager _chatManager = default!;
     [Dependency] private readonly ActionsSystem _actions = default!;
     [Dependency] private readonly EuiManager _euis = default!;
+    [Dependency] private readonly JobSystem _jobs = default!;
 
     public override void Initialize()
     {
