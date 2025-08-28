@@ -198,3 +198,18 @@
   canBuildInImpassable: false
   conditions:
     - !type:TileNotBlocked
+
+- type: construction
+  parent: RMC
+  id: RMCFlipchart
+  name: flipchart
+  description: A standing board with large paper sheets for briefings and debriefs.
+  graph: RMCFlipchart
+  startNode: start
+  targetNode: flipchart
+  category: construction-category-cm-furniture
+  objectType: Structure
+  placementMode: SnapgridCenter
+  canBuildInImpassable: false
+  conditions:
+    - !type:TileNotBlocked
