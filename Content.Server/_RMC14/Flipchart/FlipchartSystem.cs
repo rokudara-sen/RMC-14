@@ -1,4 +1,5 @@
 using Content.Shared._RMC14.Flipchart;
+using Content.Shared.Interaction;
 using Content.Shared.Paper;
 using Content.Shared.Popups;
 using Content.Shared.Verbs;
@@ -30,10 +31,11 @@ public sealed class FlipchartSystem : EntitySystem
         if (!args.CanAccess || !args.CanInteract || ent.Comp.Pages.Count == 0)
             return;
 
+        var user = args.User;
         args.Verbs.Add(new Verb
         {
             Text = Loc.GetString("flipchart-verb-next-page"),
-            Act = () => NextPage(ent, args.User)
+            Act = () => NextPage(ent, user)
         });
     }
 
