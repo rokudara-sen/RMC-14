@@ -13,7 +13,7 @@ public sealed partial class FlipchartComponent : Component
     /// The text content of each page.
     /// </summary>
     [DataField]
-    public List<string> Pages = new() { "" };
+    public List<string> Pages = new();
 
     /// <summary>
     /// Index of the currently displayed page.

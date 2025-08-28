@@ -8,7 +8,6 @@
     sprite: Structures/Wallmounts/noticeboard.rsi
     layers:
       - state: noticeboard
-  - type: Paper
   - type: PaperLabelType
   - type: Flipchart
   - type: ActivatableUI
