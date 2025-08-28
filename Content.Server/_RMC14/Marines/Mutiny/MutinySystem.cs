@@ -4,6 +4,7 @@ using Content.Server.EUI;
 using Content.Server.Actions;
 using Content.Shared._RMC14.Marines;
 using Content.Shared._RMC14.Marines.Mutiny;
+using Content.Shared._RMC14.Synth;
 using Content.Shared.Administration;
 using Content.Shared.Database;
 using Content.Shared.Mind.Components;
@@ -156,6 +157,12 @@ public sealed class MutinySystem : SharedMutinySystem
             return;
 
         if (!args.Target.IsValid() || HasComp<MutineerComponent>(args.Target) || !HasComp<MarineComponent>(args.Target))
+            return;
+
+        if (!TryComp<MindContainerComponent>(args.Target, out var mind) || !mind.HasMind)
+            return;
+
+        if (HasComp<MutinyImmuneComponent>(args.Target) || HasComp<SynthComponent>(args.Target))
             return;
 
         if (!TryComp<ActorComponent>(args.Target, out var actor))
