@@ -10,6 +10,7 @@
       - state: noticeboard
   - type: Paper
   - type: PaperLabelType
+  - type: Flipchart
   - type: ActivatableUI
     key: enum.PaperUiKey.Key
     requiresComplex: false

@@ -7,6 +7,7 @@ using Content.Shared.Interaction;
 using Content.Shared.Random.Helpers;
 using Content.Shared.Popups;
 using Content.Shared.Tag;
+using Content.Shared._RMC14.Flipchart;
 using Robust.Shared.Player;
 using Robust.Shared.Audio.Systems;
 using static Content.Shared.Paper.PaperComponent;
@@ -89,7 +90,7 @@ public sealed class PaperSystem : EntitySystem
 
     private void OnExamined(Entity<PaperComponent> entity, ref ExaminedEvent args)
     {
-        if (!args.IsInDetailsRange)
+        if (!args.IsInDetailsRange && !HasComp<Content.Shared._RMC14.Flipchart.FlipchartComponent>(entity))
             return;
 
         using (args.PushGroup(nameof(PaperComponent)))
