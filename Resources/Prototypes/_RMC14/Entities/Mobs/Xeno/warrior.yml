@@ -1,6 +1,7 @@
 - type: entity
   parent:
   - CMXenoDeveloped
+  - CMXenoAI
   - CMXenoTail
   - CMXenoFlammable
   - RMCXenoSpeechSounds
@@ -15,6 +16,15 @@
     - RMCGuideRoleWarrior
   - type: GhostRole
     name: cm-job-name-xeno-warrior
+  - type: HTN
+    rootTask:
+      task: CMXenoCompound
+    blackboard:
+      NavClimb: !type:Bool true
+      NavInteract: !type:Bool true
+      NavPry: !type:Bool true
+      NavSmash: !type:Bool true
+      IsFlanker: !type:Bool true
   - type: Sprite
     sprite: _RMC14/Mobs/Xenonids/Warrior/warrior.rsi
   - type: MobState

@@ -2,6 +2,27 @@
 - type: htnCompound
   id: CMXenoCompound
   branches:
+  - preconditions:
+    - !type:KeyExistsPrecondition
+      key: IsHarasser
+    tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoHarassCompound
+  - preconditions:
+    - !type:KeyExistsPrecondition
+      key: IsFlanker
+    tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoFlankCompound
+  - preconditions:
+    - !type:KeyExistsPrecondition
+      key: IsDefender
+    tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoDefenderCompound
+  - tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoRangedCombatCompound
   - tasks:
     - !type:HTNCompoundTask
       task: CMXenoMeleeCombatCompound
@@ -19,7 +40,91 @@
       operator: !type:UtilityOperator
         proto: NearbyMeleeTargets
     - !type:HTNCompoundTask
-      task: MeleeAttackTargetCompound
+      task: CMXenoAttackTargetCompound
+
+# Flanking attack that jukes before striking.
+- type: htnCompound
+  id: CMXenoAttackTargetCompound
+  branches:
+  - preconditions:
+    - !type:KeyExistsPrecondition
+      key: Target
+    tasks:
+    - !type:HTNPrimitiveTask
+      operator: !type:MoveToOperator
+        shutdownState: PlanFinished
+        pathfindInPlanning: true
+        removeKeyOnFinish: false
+        targetKey: TargetCoordinates
+        pathfindKey: TargetPathfind
+        rangeKey: MeleeRange
+        stopOnLineOfSight: true
+    - !type:HTNPrimitiveTask
+      operator: !type:JukeOperator
+        jukeType: AdjacentTile
+    - !type:HTNPrimitiveTask
+      operator: !type:SetRandomFloatOperator
+        targetKey: TelegraphTime
+        minAmount: 0.2
+        maxAmount: 0.5
+    - !type:HTNPrimitiveTask
+      operator: !type:WaitOperator
+        key: TelegraphTime
+      preconditions:
+      - !type:KeyExistsPrecondition
+        key: TelegraphTime
+    - !type:HTNPrimitiveTask
+      operator: !type:MeleeOperator
+        targetKey: Target
+      preconditions:
+      - !type:KeyExistsPrecondition
+        key: Target
+      - !type:TargetInRangePrecondition
+        targetKey: Target
+        rangeKey: MeleeRange
+      services:
+      - !type:UtilityService
+        id: MeleeService
+        proto: NearbyMeleeTargets
+        key: Target
+
+# Ranged harassment using innate projectiles if available.
+- type: htnCompound
+  id: CMXenoRangedCombatCompound
+  branches:
+  - tasks:
+    - !type:HTNCompoundTask
+      task: InnateRangedCombatCompound
+
+# Ranged harassment priority for harassing roles.
+- type: htnCompound
+  id: CMXenoHarassCompound
+  branches:
+  - tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoRangedCombatCompound
+    - !type:HTNCompoundTask
+      task: CMXenoMeleeCombatCompound
+
+# Aggressive flanking and pressure for melee specialists.
+- type: htnCompound
+  id: CMXenoFlankCompound
+  branches:
+  - tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoAttackTargetCompound
+    - !type:HTNCompoundTask
+      task: IdleCompound
+
+# Defensive stance that guards territory.
+- type: htnCompound
+  id: CMXenoDefenderCompound
+  branches:
+  - tasks:
+    - !type:HTNCompoundTask
+      task: CMXenoMeleeCombatCompound
+    - !type:HTNCompoundTask
+      task: IdleCompound
 
 - type: emote
   id: CMXenoDeathGasp
@@ -452,10 +557,19 @@
   id: CMXenoAI
   parent: CMXenoBase
   abstract: true
-#  components:
-#  - type: HTN # TODO RMC14 needs to not target nested marines
-#    rootTask:
-#      task: CMXenoCompound
+  components:
+  - type: HTN
+    rootTask:
+      task: CMXenoCompound
+    blackboard:
+      NavClimb: !type:Bool
+        true
+      NavInteract: !type:Bool
+        true
+      NavPry: !type:Bool
+        true
+      NavSmash: !type:Bool
+        true
 
 - type: entity
   id: CMXenoDeveloped

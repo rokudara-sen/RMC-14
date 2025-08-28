@@ -2,6 +2,7 @@
   abstract: true
   parent:
   - CMXenoDeveloped
+  - CMXenoAI
   - CMXenoTail
   - CMXenoFlammable
   - RMCXenoSpeechSounds
@@ -13,6 +14,15 @@
   components:
   - type: GhostRole
     name: cm-job-name-xeno-hivelord
+  - type: HTN
+    rootTask:
+      task: CMXenoCompound
+    blackboard:
+      NavClimb: !type:Bool true
+      NavInteract: !type:Bool true
+      NavPry: !type:Bool true
+      NavSmash: !type:Bool true
+      IsDefender: !type:Bool true
   - type: MobState
     allowedStates:
     - Alive
