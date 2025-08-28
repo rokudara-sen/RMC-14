@@ -6,7 +6,7 @@ namespace Content.Shared._RMC14.Flipchart;
 /// <summary>
 /// Stores multiple pages of text for a flipchart.
 /// </summary>
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class FlipchartComponent : Component
 {
     /// <summary>
