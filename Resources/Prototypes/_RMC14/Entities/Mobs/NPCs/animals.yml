@@ -44,6 +44,10 @@
   components:
   - type: GhostRole
     prob: 0
+  - type: EnemyAI
+  - type: NpcFactionMember
+    factions:
+    - SimpleHostile
 
 - type: entity
   parent: [RMCSimpleMob, MobMouse]

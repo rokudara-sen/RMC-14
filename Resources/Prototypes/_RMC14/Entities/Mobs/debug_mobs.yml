@@ -7,22 +7,6 @@
   - type: Marine
   - type: Loadout
     prototypes: [ CMGearStaffOfficer ]
-
-- type: entity
-  parent: CMBaseMobSpeciesOrganic
-  id: CMEnemyTestDummy
-  name: enemy test dummy
-  suffix: DEBUG
-  components:
-  - type: Loadout
-    prototypes: [ CMGearStaffOfficer ]
-  - type: EnemyAI
-  - type: MindContainer
-    showExamineInfo: false
-  - type: NpcFactionMember
-    factions:
-    - SimpleHostile
-
 - type: entity
   parent: MarkerBase
   id: SpawnCMTestDummy
@@ -37,18 +21,3 @@
   - type: ConditionalSpawner
     prototypes:
     - CMTestDummy
-
-- type: entity
-  parent: MarkerBase
-  id: SpawnCMEnemyTestDummy
-  name: Enemy Test Dummy Spawner
-  suffix: DEBUG
-  components:
-  - type: Sprite
-    layers:
-    - state: red
-    - sprite: Mobs/Species/Human/parts.rsi
-      state: full
-  - type: ConditionalSpawner
-    prototypes:
-    - CMEnemyTestDummy
