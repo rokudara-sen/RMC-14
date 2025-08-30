@@ -1,10 +1,12 @@
 using System;
+using System.Numerics;
 using Content.Server._RMC14.NPC.Components;
 using Content.Server.Interaction;
 using Content.Server.NPC.Systems;
 using Content.Shared.NPC;
 using Robust.Server.GameObjects;
 using Robust.Shared.Map;
+using Robust.Shared.Player;
 using Robust.Shared.Random;
 
 namespace Content.Server._RMC14.NPC.Systems;
@@ -139,7 +141,7 @@ public sealed class EnemyAISystem : EntitySystem
                     var target = worldPos + offset;
                     comp.WanderTarget = target;
                     comp.WanderAccumulator = comp.WanderCooldown;
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, target));
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, target));
                 }
                 break;
 
@@ -147,7 +149,7 @@ public sealed class EnemyAISystem : EntitySystem
             case EnemyAIState.Search:
                 if (comp.LastKnownTargetPos != null)
                 {
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, comp.LastKnownTargetPos.Value));
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, comp.LastKnownTargetPos.Value));
 
                     var dist = (comp.LastKnownTargetPos.Value - worldPos).Length();
                     if (dist <= 0.75f)
@@ -173,7 +175,7 @@ public sealed class EnemyAISystem : EntitySystem
                     var targetPos = _transform.GetWorldPosition(retreatXform);
                     var dir = (worldPos - targetPos).Normalized();
                     var retreatPos = worldPos + dir * comp.PatrolRadius;
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, retreatPos));
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, retreatPos));
                 }
                 break;
         }
