@@ -1,6 +1,7 @@
 using System;
 using Content.Server._RMC14.NPC.Components;
 using Content.Server.Interaction;
+using Content.Server.NPC.Systems;
 using Content.Shared.NPC;
 using Robust.Server.GameObjects;
 using Robust.Shared.Map;
@@ -16,6 +17,7 @@ public sealed class EnemyAISystem : EntitySystem
 {
     [Dependency] private readonly InteractionSystem _interaction = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private readonly NPCSteeringSystem _steering = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
 
     public override void Initialize()
@@ -61,6 +63,8 @@ public sealed class EnemyAISystem : EntitySystem
                         comp.State = EnemyAIState.Idle;
                     break;
             }
+
+            HandleMovement(uid, comp, xform, frameTime);
         }
     }
 
@@ -71,6 +75,7 @@ public sealed class EnemyAISystem : EntitySystem
 
     private void OnShutdown(EntityUid uid, EnemyAIComponent comp, ComponentShutdown args)
     {
+        _steering.Unregister(uid);
         RemComp<ActiveNPCComponent>(uid);
     }
 
@@ -91,6 +96,9 @@ public sealed class EnemyAISystem : EntitySystem
 
             if (distance <= comp.SightRange && _interaction.InRangeUnobstructed(uid, playerUid, comp.SightRange))
             {
+                if (comp.Target == null)
+                    AlertAllies(uid, comp, xform, targetPos);
+
                 comp.Target = playerUid;
                 comp.AlertLevel += frameTime;
                 comp.LastKnownTargetPos = targetPos;
@@ -102,6 +110,93 @@ public sealed class EnemyAISystem : EntitySystem
                 comp.AlertLevel += frameTime * 0.5f;
                 comp.LastKnownTargetPos = targetPos;
             }
+        }
+    }
+
+    private void HandleMovement(EntityUid uid, EnemyAIComponent comp, TransformComponent xform, float frameTime)
+    {
+        var worldPos = _transform.GetWorldPosition(xform);
+
+        switch (comp.State)
+        {
+            case EnemyAIState.Idle:
+            case EnemyAIState.Patrol:
+                comp.WanderAccumulator -= frameTime;
+
+                if (comp.WanderTarget != null)
+                {
+                    var dist = (comp.WanderTarget.Value - worldPos).Length();
+                    if (dist <= 0.5f)
+                    {
+                        comp.WanderTarget = null;
+                        _steering.Unregister(uid);
+                    }
+                }
+
+                if (comp.WanderAccumulator <= 0f && comp.WanderTarget == null)
+                {
+                    var offset = _random.NextVector2(comp.PatrolRadius);
+                    var target = worldPos + offset;
+                    comp.WanderTarget = target;
+                    comp.WanderAccumulator = comp.WanderCooldown;
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, target));
+                }
+                break;
+
+            case EnemyAIState.Investigate:
+            case EnemyAIState.Search:
+                if (comp.LastKnownTargetPos != null)
+                {
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, comp.LastKnownTargetPos.Value));
+
+                    var dist = (comp.LastKnownTargetPos.Value - worldPos).Length();
+                    if (dist <= 0.75f)
+                        comp.LastKnownTargetPos = null;
+                }
+                break;
+
+            case EnemyAIState.Attack:
+                if (comp.Target != null && TryComp<TransformComponent>(comp.Target.Value, out var targetXform))
+                {
+                    var targetPos = _transform.GetWorldPosition(targetXform);
+                    _steering.Register(uid, targetXform.Coordinates);
+
+                    var dist = (targetPos - worldPos).Length();
+                    if (dist <= comp.AttackRange)
+                        _steering.Unregister(uid);
+                }
+                break;
+
+            case EnemyAIState.Retreat:
+                if (comp.Target != null && TryComp<TransformComponent>(comp.Target.Value, out var retreatXform))
+                {
+                    var targetPos = _transform.GetWorldPosition(retreatXform);
+                    var dir = (worldPos - targetPos).Normalized();
+                    var retreatPos = worldPos + dir * comp.PatrolRadius;
+                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!, retreatPos));
+                }
+                break;
+        }
+    }
+
+    private void AlertAllies(EntityUid uid, EnemyAIComponent comp, TransformComponent xform, Vector2 targetPos)
+    {
+        var ourPos = _transform.GetWorldPosition(xform);
+        var allies = EntityQueryEnumerator<EnemyAIComponent, TransformComponent>();
+
+        while (allies.MoveNext(out var otherUid, out var otherComp, out var otherXform))
+        {
+            if (otherUid == uid || otherXform.MapID != xform.MapID)
+                continue;
+
+            var dist = (_transform.GetWorldPosition(otherXform) - ourPos).Length();
+            if (dist > comp.HearingRadius * 2f)
+                continue;
+
+            otherComp.AlertLevel = MathF.Max(otherComp.AlertLevel, comp.AlertLevel);
+            otherComp.LastKnownTargetPos = targetPos;
+            if (otherComp.State == EnemyAIState.Idle || otherComp.State == EnemyAIState.Patrol)
+                otherComp.State = EnemyAIState.Investigate;
         }
     }
 }
