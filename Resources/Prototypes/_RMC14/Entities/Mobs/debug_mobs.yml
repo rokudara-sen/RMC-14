@@ -17,6 +17,8 @@
   - type: Loadout
     prototypes: [ CMGearStaffOfficer ]
   - type: EnemyAI
+  - type: MindContainer
+    showExamineInfo: false
   - type: NpcFactionMember
     factions:
     - SimpleHostile
