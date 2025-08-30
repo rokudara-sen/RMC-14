@@ -119,6 +119,10 @@ public sealed class EnemyAISystem : EntitySystem
     {
         var worldPos = _transform.GetWorldPosition(xform);
 
+        if (xform.MapUid == null)
+            return;
+        var mapUid = xform.MapUid.Value;
+
         switch (comp.State)
         {
             case EnemyAIState.Idle:
@@ -141,7 +145,7 @@ public sealed class EnemyAISystem : EntitySystem
                     var target = worldPos + offset;
                     comp.WanderTarget = target;
                     comp.WanderAccumulator = comp.WanderCooldown;
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, target));
+                    _steering.TryRegister(uid, new EntityCoordinates(mapUid, target));
                 }
                 break;
 
@@ -149,7 +153,7 @@ public sealed class EnemyAISystem : EntitySystem
             case EnemyAIState.Search:
                 if (comp.LastKnownTargetPos != null)
                 {
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, comp.LastKnownTargetPos.Value));
+                    _steering.TryRegister(uid, new EntityCoordinates(mapUid, comp.LastKnownTargetPos.Value));
 
                     var dist = (comp.LastKnownTargetPos.Value - worldPos).Length();
                     if (dist <= 0.75f)
@@ -161,7 +165,7 @@ public sealed class EnemyAISystem : EntitySystem
                 if (comp.Target != null && TryComp<TransformComponent>(comp.Target.Value, out var targetXform))
                 {
                     var targetPos = _transform.GetWorldPosition(targetXform);
-                    _steering.Register(uid, targetXform.Coordinates);
+                    _steering.TryRegister(uid, targetXform.Coordinates);
 
                     var dist = (targetPos - worldPos).Length();
                     if (dist <= comp.AttackRange)
@@ -175,7 +179,7 @@ public sealed class EnemyAISystem : EntitySystem
                     var targetPos = _transform.GetWorldPosition(retreatXform);
                     var dir = (worldPos - targetPos).Normalized();
                     var retreatPos = worldPos + dir * comp.PatrolRadius;
-                    _steering.Register(uid, new EntityCoordinates(xform.MapUid!.Value, retreatPos));
+                    _steering.TryRegister(uid, new EntityCoordinates(mapUid, retreatPos));
                 }
                 break;
         }
