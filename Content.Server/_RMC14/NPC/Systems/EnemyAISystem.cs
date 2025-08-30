@@ -1,6 +1,7 @@
 using System;
 using Content.Server._RMC14.NPC.Components;
 using Content.Server.Interaction;
+using Content.Shared.NPC;
 using Robust.Server.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Random;
@@ -16,6 +17,14 @@ public sealed class EnemyAISystem : EntitySystem
     [Dependency] private readonly InteractionSystem _interaction = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        SubscribeLocalEvent<EnemyAIComponent, ComponentStartup>(OnStartup);
+        SubscribeLocalEvent<EnemyAIComponent, ComponentShutdown>(OnShutdown);
+    }
 
     public override void Update(float frameTime)
     {
@@ -53,6 +62,16 @@ public sealed class EnemyAISystem : EntitySystem
                     break;
             }
         }
+    }
+
+    private void OnStartup(EntityUid uid, EnemyAIComponent comp, ComponentStartup args)
+    {
+        EnsureComp<ActiveNPCComponent>(uid);
+    }
+
+    private void OnShutdown(EntityUid uid, EnemyAIComponent comp, ComponentShutdown args)
+    {
+        RemComp<ActiveNPCComponent>(uid);
     }
 
     private void Perceive(EntityUid uid, EnemyAIComponent comp, TransformComponent xform, float frameTime)
