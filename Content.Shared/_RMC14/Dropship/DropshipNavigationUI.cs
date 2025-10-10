@@ -6,11 +6,12 @@ using Robust.Shared.Serialization;
 namespace Content.Shared._RMC14.Dropship;
 
 [Serializable, NetSerializable]
-public sealed class DropshipNavigationDestinationsBuiState(NetEntity? flyBy, List<Destination> destinations, Dictionary<DoorLocation, bool> doorLockStatus) : BoundUserInterfaceState
+public sealed class DropshipNavigationDestinationsBuiState(NetEntity? flyBy, List<Destination> destinations, Dictionary<DoorLocation, bool> doorLockStatus, DropshipManualFuelingData? manualFueling) : BoundUserInterfaceState
 {
     public readonly NetEntity? FlyBy = flyBy;
     public readonly List<Destination> Destinations = destinations;
     public readonly Dictionary<DoorLocation, bool> DoorLockStatus = doorLockStatus;
+    public readonly DropshipManualFuelingData? ManualFueling = manualFueling;
 }
 
 [Serializable, NetSerializable]
@@ -41,6 +42,11 @@ public sealed class DropshipLockdownMsg(DoorLocation doorLocation) : BoundUserIn
 }
 
 [Serializable, NetSerializable]
+public sealed class DropshipNavigationFuelMsg : BoundUserInterfaceMessage
+{
+}
+
+[Serializable, NetSerializable]
 public enum DropshipNavigationUiKey
 {
     Key
@@ -48,3 +54,6 @@ public enum DropshipNavigationUiKey
 
 [Serializable, NetSerializable]
 public readonly record struct Destination(NetEntity Id, string Name, bool Occupied, bool Primary);
+
+[Serializable, NetSerializable]
+public sealed record DropshipManualFuelingData(bool ManualFuelingComplete, StartEndTime? ManualFuelingTime, float AutoFuelingSecondsRemaining);

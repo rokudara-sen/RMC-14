@@ -1,10 +1,12 @@
-﻿using Content.Client.Message;
+﻿using System;
+using Content.Client.Message;
 using Content.Shared._RMC14.Dropship;
 using Content.Shared.Doors.Components;
 using Content.Shared.Shuttles.Systems;
 using JetBrains.Annotations;
 using Robust.Client.UserInterface;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Client._RMC14.Dropship;
 
@@ -19,6 +21,8 @@ public sealed class DropshipNavigationBui : BoundUserInterface
 
     private readonly Dictionary<DropshipButton, string> _destinations = new();
     private NetEntity? _selected;
+    private bool _manualFuelingBlocked;
+    private DropshipManualFuelingData? _manualFueling;
 
     public DropshipNavigationBui(EntityUid owner, Enum uiKey) : base(owner, uiKey)
     {
@@ -81,6 +85,12 @@ public sealed class DropshipNavigationBui : BoundUserInterface
             ResetDestinationButtons();
         };
 
+        _window.FuelButton.Button.OnPressed += _ =>
+        {
+            _window.FuelButton.Button.Disabled = true;
+            SendPredictedMessage(new DropshipNavigationFuelMsg());
+        };
+
         _window.LockdownButton.Button.OnPressed += _ => SendPredictedMessage(new DropshipLockdownMsg(DoorLocation.None));
         _window.LockdownButtonAft.Button.OnPressed += _ => SendPredictedMessage(new DropshipLockdownMsg(DoorLocation.Aft));
         _window.LockdownButtonPort.Button.OnPressed += _ => SendPredictedMessage(new DropshipLockdownMsg(DoorLocation.Port));
@@ -99,6 +109,7 @@ public sealed class DropshipNavigationBui : BoundUserInterface
         if (_window == null)
             return;
 
+        SetManualFueling(destinations.ManualFueling);
         SetFlightHeader("Flight Controls");
 
         _window.DestinationsContainer.Visible = true;
@@ -153,6 +164,7 @@ public sealed class DropshipNavigationBui : BoundUserInterface
         if (_window == null)
             return;
 
+        SetManualFueling(null);
         _window.DestinationsContainer.Visible = false;
         _window.ProgressBarContainer.Visible = true;
         _window.LaunchButton.Visible = false;
@@ -207,6 +219,69 @@ public sealed class DropshipNavigationBui : BoundUserInterface
         _window.ProgressBar.SetAsRatio(1 - startEndTime.ProgressAt(_timing.CurTime));
     }
 
+    private void SetManualFueling(DropshipManualFuelingData? data)
+    {
+        if (_window == null)
+            return;
+
+        _manualFueling = data;
+        _manualFuelingBlocked = false;
+
+        _window.FuelStatus.Visible = false;
+        _window.FuelStatus.SetMarkup(string.Empty);
+        _window.FuelButton.Visible = false;
+        _window.FuelButton.Button.Disabled = false;
+
+        if (data == null)
+            return;
+
+        var autoRemaining = MathF.Max(0f, data.Value.AutoFuelingSecondsRemaining);
+        if (data.Value.ManualFuelingComplete || autoRemaining <= 0f)
+            return;
+
+        _manualFuelingBlocked = true;
+        _window.FuelStatus.Visible = true;
+        _window.FuelButton.Visible = true;
+
+        if (data.Value.ManualFuelingTime is { } fuelingTime)
+        {
+            var secondsLeft = MathF.Ceiling((float) (fuelingTime.End - _timing.CurTime).TotalSeconds);
+            if (secondsLeft < 0)
+                secondsLeft = 0;
+
+            _window.FuelStatus.SetMarkup(Loc.GetString("rmc-dropship-manual-fueling-progress", ("seconds", (int) secondsLeft)));
+            _window.FuelButton.Text = Loc.GetString("rmc-dropship-manual-fueling-button-progress");
+            _window.FuelButton.Button.Disabled = true;
+        }
+        else
+        {
+            var minutesLeft = Math.Max(1, (int) MathF.Ceiling(autoRemaining / 60f));
+            _window.FuelStatus.SetMarkup(Loc.GetString("rmc-dropship-pre-flight-fueling", ("minutes", minutesLeft)));
+            _window.FuelButton.Text = Loc.GetString("rmc-dropship-manual-fueling-button");
+            _window.FuelButton.Button.Disabled = false;
+        }
+    }
+
+    protected override void FrameUpdate(FrameEventArgs args)
+    {
+        base.FrameUpdate(args);
+
+        if (_window == null)
+            return;
+
+        if (_manualFueling is not { ManualFuelingTime: { } fuelingTime })
+            return;
+
+        var secondsLeft = MathF.Ceiling((float) (fuelingTime.End - _timing.CurTime).TotalSeconds);
+        if (secondsLeft < 0)
+            secondsLeft = 0;
+
+        _window.FuelStatus.SetMarkup(Loc.GetString("rmc-dropship-manual-fueling-progress", ("seconds", (int) secondsLeft)));
+
+        if (secondsLeft <= 0)
+            _window.FuelButton.Button.Disabled = true;
+    }
+
     private void SetFlightHeader(string label)
     {
         _window?.Header.SetMarkup($"[color=#0BDC49][font size=16][bold]{label}[/bold][/font][/color]");
@@ -222,7 +297,7 @@ public sealed class DropshipNavigationBui : BoundUserInterface
         if (_window == null)
             return;
 
-        _window.LaunchButton.Button.Disabled = disabled;
+        _window.LaunchButton.Button.Disabled = disabled || _manualFuelingBlocked;
     }
 
     private void SetCancelDisabled(bool disabled)
@@ -230,7 +305,7 @@ public sealed class DropshipNavigationBui : BoundUserInterface
         if (_window == null)
             return;
 
-        _window.CancelButton.Button.Disabled = disabled;
+        _window.CancelButton.Button.Disabled = disabled || _manualFuelingBlocked;
     }
 
     private void SetLockDownDisabled(bool disabled)

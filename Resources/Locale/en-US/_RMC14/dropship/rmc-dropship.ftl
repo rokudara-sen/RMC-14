@@ -1,6 +1,13 @@
 ﻿rmc-dropship-pre-flight-fueling = The shuttle is still undergoing pre-flight fueling and cannot depart yet. Please wait another {$minutes} minutes before trying again.
 rmc-dropship-pre-hijack = This terminal won't be operational for another {$minutes} minutes.
 rmc-dropship-invalid-hijack = Lights flash from the terminal but you can't comprehend their meaning.
+rmc-dropship-manual-fueling-button = Manual Fuel
+rmc-dropship-manual-fueling-button-progress = Fueling...
+rmc-dropship-manual-fueling-progress = Manual fueling in progress. Ready in T-{$seconds}s.
+rmc-dropship-manual-fueling-start = You begin manually fueling the dropship.
+rmc-dropship-manual-fueling-not-needed = The dropship is already fully fueled.
+rmc-dropship-manual-fueling-already-complete = Manual fueling has already been completed.
+rmc-dropship-manual-fueling-already-in-progress = Manual fueling is already underway. Ready in T-{$seconds}s.
 
 rmc-dropship-weapons-title = Weapons Console
 

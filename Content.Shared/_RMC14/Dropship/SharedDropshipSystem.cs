@@ -21,6 +21,7 @@ using Content.Shared.Shuttles.Systems;
 using Content.Shared.UserInterface;
 using Robust.Shared.Configuration;
 using Robust.Shared.Containers;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Timing;
@@ -73,6 +74,7 @@ public abstract class SharedDropshipSystem : EntitySystem
             {
                 subs.Event<DropshipNavigationLaunchMsg>(OnDropshipNavigationLaunchMsg);
                 subs.Event<DropshipNavigationCancelMsg>(OnDropshipNavigationCancelMsg);
+                subs.Event<DropshipNavigationFuelMsg>(OnDropshipNavigationFuelMsg);
             });
 
         Subs.BuiEvents<DropshipNavigationComputerComponent>(DropshipHijackerUiKey.Key,
@@ -379,6 +381,10 @@ public abstract class SharedDropshipSystem : EntitySystem
     {
     }
 
+    protected virtual void OnDropshipNavigationFuelMsg(Entity<DropshipNavigationComputerComponent> computer, ref DropshipNavigationFuelMsg args)
+    {
+    }
+
     protected virtual bool IsShuttle(EntityUid dropship)
     {
         return false;
@@ -394,6 +400,9 @@ public abstract class SharedDropshipSystem : EntitySystem
         var roundDuration = _gameTicker.RoundDuration();
         if (roundDuration < _dropshipInitialDelay)
         {
+            if (ManualFuelingReady(computer))
+                return true;
+
             var minutesLeft = Math.Max(1, (int)(_dropshipInitialDelay - roundDuration).TotalMinutes);
             var msg = Loc.GetString("rmc-dropship-pre-flight-fueling", ("minutes", minutesLeft));
 
@@ -406,6 +415,26 @@ public abstract class SharedDropshipSystem : EntitySystem
         }
 
         return true;
+    }
+
+    private bool ManualFuelingReady(EntityUid computer)
+    {
+        if (!TryComp(computer, out TransformComponent? transform) ||
+            transform.ParentUid is not { Valid: true } parent)
+        {
+            return false;
+        }
+
+        if (!TryComp(parent, out DropshipComponent? dropship))
+            return false;
+
+        if (dropship.ManualFuelingComplete)
+            return true;
+
+        if (dropship.ManualFuelingEndTime is { } finish && _timing.CurTime >= finish)
+            return true;
+
+        return false;
     }
 
     protected bool TryDropshipHijackPopup(EntityUid computer, Entity<DropshipHijackerComponent?> user, bool predicted)

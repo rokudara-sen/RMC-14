@@ -47,6 +47,15 @@ public sealed partial class DropshipComponent : Component
     [DataField, AutoNetworkedField]
     public TimeSpan? RechargeTime;
 
+    [DataField, AutoNetworkedField]
+    public TimeSpan ManualFuelingDuration = TimeSpan.FromSeconds(120);
+
+    [DataField, AutoNetworkedField]
+    public bool ManualFuelingComplete;
+
+    [DataField(customTypeSerializer: typeof(TimeOffsetSerializer)), AutoNetworkedField, AutoPausedField]
+    public TimeSpan? ManualFuelingEndTime;
+
     [DataField(customTypeSerializer: typeof(TimeOffsetSerializer)), AutoNetworkedField, AutoPausedField]
     public TimeSpan? HijackLandAt;
 

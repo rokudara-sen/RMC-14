@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using Content.Server._RMC14.Marines;
 using Content.Server.Doors.Systems;
 using Content.Server.GameTicking;
@@ -240,6 +241,49 @@ public sealed class DropshipSystem : SharedDropshipSystem
         OnRefreshUI((grid, dropship), ref args);
     }
 
+    protected override void OnDropshipNavigationFuelMsg(Entity<DropshipNavigationComputerComponent> ent, ref DropshipNavigationFuelMsg args)
+    {
+        base.OnDropshipNavigationFuelMsg(ent, ref args);
+
+        var user = args.Actor;
+        if (user == null)
+            return;
+
+        if (_transform.GetGrid(ent.Owner) is not { } grid ||
+            !TryComp(grid, out DropshipComponent? dropship))
+        {
+            return;
+        }
+
+        var roundDuration = _gameTicker.RoundDuration();
+        if (roundDuration >= _dropshipInitialDelay)
+        {
+            _popup.PopupEntity(Loc.GetString("rmc-dropship-manual-fueling-not-needed"), ent.Owner, user.Value);
+            return;
+        }
+
+        if (dropship.ManualFuelingComplete)
+        {
+            _popup.PopupEntity(Loc.GetString("rmc-dropship-manual-fueling-already-complete"), ent.Owner, user.Value);
+            return;
+        }
+
+        var time = _timing.CurTime;
+        if (dropship.ManualFuelingEndTime is { } finish && finish > time)
+        {
+            var secondsLeft = Math.Max(1, (int) Math.Ceiling((finish - time).TotalSeconds));
+            _popup.PopupEntity(Loc.GetString("rmc-dropship-manual-fueling-already-in-progress", ("seconds", secondsLeft)), ent.Owner, user.Value);
+            return;
+        }
+
+        dropship.ManualFuelingEndTime = time + dropship.ManualFuelingDuration;
+        Dirty(grid, dropship);
+
+        _popup.PopupEntity(Loc.GetString("rmc-dropship-manual-fueling-start"), ent.Owner, user.Value);
+        RefreshUI(ent);
+        RefreshUI();
+    }
+
     public override bool FlyTo(Entity<DropshipNavigationComputerComponent> computer, EntityUid destination, EntityUid? user, bool hijack = false, float? startupTime = null, float? hyperspaceTime = null, bool offset = false)
     {
         base.FlyTo(computer, destination, user, hijack, startupTime, hyperspaceTime);
@@ -408,6 +452,24 @@ public sealed class DropshipSystem : SharedDropshipSystem
             !ftl.Running ||
             ftl.State == FTLState.Available)
         {
+            DropshipManualFuelingData? manualFueling = null;
+            if (TryComp(grid, out DropshipComponent? dropship) && !dropship.ManualFuelingComplete)
+            {
+                var roundDuration = _gameTicker.RoundDuration();
+                var autoRemaining = (float) (_dropshipInitialDelay - roundDuration).TotalSeconds;
+                if (autoRemaining > 0f)
+                {
+                    StartEndTime? manualFuelingTime = null;
+                    if (dropship.ManualFuelingEndTime is { } finish && finish > _timing.CurTime)
+                    {
+                        var start = finish - dropship.ManualFuelingDuration;
+                        manualFuelingTime = new StartEndTime(start, finish);
+                    }
+
+                    manualFueling = new DropshipManualFuelingData(dropship.ManualFuelingComplete, manualFuelingTime, autoRemaining);
+                }
+            }
+
             NetEntity? flyBy = null;
             var destinations = new List<Destination>();
             var query = EntityQueryEnumerator<DropshipDestinationComponent>();
@@ -429,7 +491,7 @@ public sealed class DropshipSystem : SharedDropshipSystem
                 destinations.Add(destination);
             }
 
-            var state = new DropshipNavigationDestinationsBuiState(flyBy, destinations, doorLockStatus);
+            var state = new DropshipNavigationDestinationsBuiState(flyBy, destinations, doorLockStatus, manualFueling);
             _ui.SetUiState(computer.Owner, DropshipNavigationUiKey.Key, state);
             return;
         }
@@ -578,7 +640,35 @@ public sealed class DropshipSystem : SharedDropshipSystem
     {
         base.Update(frameTime);
 
-        var time = _timing.CurTime;
+        var curTime = _timing.CurTime;
+        var roundDuration = _gameTicker.RoundDuration();
+
+        var refreshFuel = false;
+        var manualQuery = EntityQueryEnumerator<DropshipComponent>();
+        while (manualQuery.MoveNext(out var uid, out var dropship))
+        {
+            if (!dropship.ManualFuelingComplete && roundDuration >= _dropshipInitialDelay)
+            {
+                dropship.ManualFuelingComplete = true;
+                dropship.ManualFuelingEndTime = null;
+                Dirty(uid, dropship);
+                refreshFuel = true;
+                continue;
+            }
+
+            if (dropship.ManualFuelingEndTime is not { } finish || finish > curTime)
+                continue;
+
+            dropship.ManualFuelingEndTime = null;
+            dropship.ManualFuelingComplete = true;
+            Dirty(uid, dropship);
+            refreshFuel = true;
+        }
+
+        if (refreshFuel)
+            RefreshUI();
+
+        var time = curTime;
 
         var dropships = EntityQueryEnumerator<DropshipComponent, FTLComponent>();
         while (dropships.MoveNext(out var uid, out var dropship, out var ftl))
