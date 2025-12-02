@@ -10,6 +10,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Audio.Components;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Configuration;
+using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
@@ -24,6 +25,7 @@ public sealed class CassetteSystem : SharedCassetteSystem
     [Dependency] private readonly IConfigurationManager _config = default!;
     [Dependency] private readonly IFileDialogManager _dialogs = default!;
     [Dependency] private readonly InventorySystem _inventory = default!;
+    [Dependency] private readonly INetManager _net = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly IPrototypeManager _prototype = default!;
     [Dependency] private readonly IResourceCache _resourceCache = default!;
@@ -85,10 +87,13 @@ public sealed class CassetteSystem : SharedCassetteSystem
         }
     }
 
-    protected override EntityUid? PlayCustomTrack(Entity<CassettePlayerComponent> player, Entity<CassetteTapeComponent> tape)
+    protected override EntityUid? PlayCustomTrack(Entity<CassettePlayerComponent> player, Entity<CassetteTapeComponent> tape, int track)
     {
-        base.PlayCustomTrack(player, tape);
-        if (tape.Comp.CustomTrack is not AudioStream stream)
+        base.PlayCustomTrack(player, tape, track);
+        if (track < 0 || track >= tape.Comp.CustomTracks.Count)
+            return null;
+
+        if (tape.Comp.CustomTracks[track] is not AudioStream stream)
             return null;
 
         if (!_timing.IsFirstTimePredicted)
@@ -114,11 +119,14 @@ public sealed class CassetteSystem : SharedCassetteSystem
                 return;
 
             var audio = _audioManager.LoadAudioOggVorbis(file);
-            tape.Comp.CustomTrack = audio;
+            tape.Comp.CustomTracks.Add(audio);
 
             var name = $"/Audio/_RMC14/_CustomCassetteUploads/upload_{_names.Count}.ogg";
             _resourceCache.CacheResource(name, new AudioResource(audio));
             _names[audio] = name;
+
+            if (_net.IsClient && _net.IsConnected)
+                RaiseNetworkEvent(new CassetteCustomTrackCountEvent(EntityManager.GetNetEntity(tape.Owner), tape.Comp.CustomTracks.Count));
         }
         catch (Exception e)
         {

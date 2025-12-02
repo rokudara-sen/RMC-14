@@ -1,4 +1,5 @@
-﻿using Content.Shared._RMC14.CCVar;
+﻿using System;
+using Content.Shared._RMC14.CCVar;
 using Content.Shared._RMC14.Hands;
 using Content.Shared._RMC14.Xenonids;
 using Content.Shared.Actions;
@@ -54,6 +55,26 @@ public abstract class SharedCassetteSystem : EntitySystem
         SubscribeLocalEvent<CassetteTapeComponent, ExaminedEvent>(OnTapeExamined);
         SubscribeLocalEvent<CassetteTapeComponent, UseInHandEvent>(OnPlayerUseInHand);
         SubscribeLocalEvent<CassetteTapeComponent, GetVerbsEvent<AlternativeVerb>>(OnTapeGetVerbsAlternative);
+
+        SubscribeNetworkEvent<CassetteCustomTrackCountEvent>(OnCustomTrackCount);
+    }
+
+    private void OnCustomTrackCount(CassetteCustomTrackCountEvent ev, EntitySessionEventArgs args)
+    {
+        if (!_net.IsServer || !_net.IsConnected)
+            return;
+
+        var tapeUid = GetEntity(ev.Tape);
+
+        if (!TryComp(tapeUid, out CassetteTapeComponent? tape))
+            return;
+
+        var newCount = Math.Max(tape.CustomTrackCount, ev.Count);
+        if (newCount == tape.CustomTrackCount)
+            return;
+
+        tape.CustomTrackCount = newCount;
+        Dirty(tapeUid, tape);
     }
 
     private void OnPlayerDetached(PlayerDetachedEvent ev)
@@ -164,15 +185,20 @@ public abstract class SharedCassetteSystem : EntitySystem
         StopAllAudio(player);
 
         tape ??= player.Comp.Tape;
-        if (tape < 0 || tape >= tapeComp.Songs.Count)
+        var totalSongs = GetTotalSongs(player);
+        if (totalSongs <= 0)
+            return;
+
+        if (tape < 0 || tape >= totalSongs)
             tape = 0;
 
-        if (tapeComp.Custom)
-        {
-            if (PlayCustomTrack(player, (tapeId.Value, tapeComp)) is { } custom)
-                player.Comp.CustomAudioStream = custom;
+        var customIndex = tape.Value - tapeComp.Songs.Count;
 
-            player.Comp.Tape = 0;
+        if (tapeComp.Custom && customIndex >= 0)
+        {
+            if (customIndex < tapeComp.CustomTracks.Count &&
+                PlayCustomTrack(player, (tapeId.Value, tapeComp), customIndex) is { } custom)
+                player.Comp.CustomAudioStream = custom;
         }
         else if (_net.IsServer)
         {
@@ -294,7 +320,11 @@ public abstract class SharedCassetteSystem : EntitySystem
         using (args.PushGroup(nameof(CassetteTapeComponent)))
         {
             if (ent.Comp.Custom)
-                args.PushMarkup(Loc.GetString("rmc-cassette-tape-custom"));
+            {
+                var customTracks = Math.Max(ent.Comp.CustomTrackCount, ent.Comp.CustomTracks.Count);
+                var total = ent.Comp.Songs.Count + customTracks;
+                args.PushMarkup(Loc.GetString("rmc-cassette-tape-custom", ("total", total)));
+            }
             else
                 args.PushMarkup(Loc.GetString("rmc-cassette-tape-examine", ("total", ent.Comp.Songs.Count)));
         }
@@ -353,14 +383,11 @@ public abstract class SharedCassetteSystem : EntitySystem
         if (!TryGetTape(player, out var tape))
             return 0;
 
-        var total = tape.Comp.Songs.Count;
-        if (tape is { Comp.CustomTrack: not null })
-            total++;
-
-        return total;
+        var customTracks = Math.Max(tape.Comp.CustomTrackCount, tape.Comp.CustomTracks.Count);
+        return tape.Comp.Songs.Count + customTracks;
     }
 
-    protected virtual EntityUid? PlayCustomTrack(Entity<CassettePlayerComponent> player, Entity<CassetteTapeComponent> tape)
+    protected virtual EntityUid? PlayCustomTrack(Entity<CassettePlayerComponent> player, Entity<CassetteTapeComponent> tape, int track)
     {
         return null;
     }

@@ -14,5 +14,8 @@ public sealed partial class CassetteTapeComponent : Component
     public bool Custom;
 
     [DataField]
-    public object? CustomTrack;
+    public List<object> CustomTracks = new();
+
+    [DataField, AutoNetworkedField]
+    public int CustomTrackCount;
 }
